@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zingela - Stateless Line-Rate Network Scanner</title>
+  <style>
+    :root {
+      --bg: #0a0d17;
+      --panel: #111827;
+      --border: rgba(247, 164, 29, 0.25);
+      --zig-orange: #f7a41d;
+      --cyan: #38bdf8;
+      --green: #10b981;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      padding: 30px 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1050px; margin: 0 auto; }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 20px; margin-bottom: 25px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 24px; font-weight: 800; color: var(--zig-orange); letter-spacing: 1px; }
+    .badge { background: rgba(247, 164, 29, 0.15); border: 1px solid var(--zig-orange); color: var(--zig-orange); padding: 5px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; }
+    .grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+    @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .card h3 { font-size: 15px; margin-bottom: 12px; color: var(--zig-orange); text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+    input, select { width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 9px 12px; color: #fff; font-size: 13px; outline: none; }
+    input:focus { border-color: var(--zig-orange); }
+    .scan-btn { width: 100%; background: linear-gradient(135deg, #f7a41d, #d97706); border: none; color: #000; font-weight: 800; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-top: 10px; font-size: 14px; }
+    .scan-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .terminal { background: #020617; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; height: 380px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.5; color: #e2e8f0; }
+    .term-line { margin-bottom: 4px; }
+    .open-port { color: var(--green); font-weight: 700; }
+
+    /* Floating AI Copilot Widget */
+    .cyber-ai-widget-root { position: fixed; bottom: 24px; right: 24px; z-index: 99999; }
+    .cyber-ai-trigger {
+      display: flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, #f7a41d, #ea580c);
+      color: #000; border: 1px solid rgba(247, 164, 29, 0.6);
+      padding: 12px 18px; border-radius: 9999px;
+      cursor: pointer; font-weight: 800; font-size: 13px;
+      box-shadow: 0 8px 24px rgba(247, 164, 29, 0.4);
+      outline: none; transition: 0.2s;
+    }
+    .cyber-ai-trigger:hover { transform: scale(1.04); }
+    .cyber-ai-modal {
+      position: absolute; bottom: 56px; right: 0;
+      width: 440px; max-width: calc(100vw - 32px); height: 580px;
+      background: rgba(17, 24, 39, 0.96); backdrop-filter: blur(20px);
+      border: 1px solid var(--border); border-radius: 14px;
+      display: none; flex-direction: column; overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+    .cyber-ai-modal.active { display: flex; }
+    .cyber-header { padding: 12px 16px; background: #0b0f19; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .cyber-chips { padding: 8px 12px; background: #111827; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 6px; overflow-x: auto; }
+    .cyber-chip { background: rgba(31, 41, 55, 0.8); border: 1px solid rgba(247, 164, 29, 0.3); color: var(--zig-orange); font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+    .cyber-chip:hover { background: var(--zig-orange); color: #000; }
+    .cyber-messages { flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.4; }
+    .msg.user { align-self: flex-end; background: #ea580c; color: #fff; }
+    .msg.bot { align-self: flex-start; background: #1f2937; border: 1px solid var(--border); color: #e5e7eb; }
+    .cyber-input-form { padding: 10px; background: #0b0f19; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .cyber-input { flex: 1; background: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 10px; color: #fff; outline: none; }
+    .cyber-send { background: var(--zig-orange); border: none; color: #000; font-weight: 800; padding: 0 14px; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">⚡ ZINGELA STATELESS SCANNER</div>
+      <div class="badge">Line-Rate SYN Scanner (Zig + AF_PACKET)</div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <h3>🚀 Scan Configuration</h3>
+        <div class="form-group">
+          <label>Target Subnet / CIDR</label>
+          <input type="text" id="target" value="192.168.1.0/24" />
+        </div>
+        <div class="form-group">
+          <label>Port Specifier</label>
+          <input type="text" id="ports" value="22,80,443,3306,5432,8080" />
+        </div>
+        <div class="form-group">
+          <label>Scan Engine</label>
+          <select id="engine">
+            <option value="raw">AF_PACKET (Linux Raw SYN)</option>
+            <option value="xdp">AF_XDP (Kernel Bypass)</option>
+            <option value="connect">Standard TCP Connect</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Packet Rate (pkts/sec)</label>
+          <input type="number" id="rate" value="10000" />
+        </div>
+        <button class="scan-btn" onclick="runScan()">⚡ Launch Mass Scan</button>
+      </div>
+
+      <div class="card">
+        <h3>📡 Real-time Scan Output & Service Banners</h3>
+        <div class="terminal" id="term">
+          <div class="term-line" style="color: #6b7280;">Zingela v0.1.0 compiled with Zig 0.13. Ready.</div>
+          <div class="term-line" style="color: #6b7280;">Click 'Launch Mass Scan' to begin line-rate permutation scan...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attack Surface AI Copilot -->
+  <div class="cyber-ai-widget-root">
+    <button class="cyber-ai-trigger" onclick="toggleChat()">
+      <span>🌐</span> <span>Attack Surface AI Copilot</span>
+    </button>
+
+    <div class="cyber-ai-modal" id="chatModal">
+      <div class="cyber-header">
+        <div>
+          <strong style="font-size: 13px; color: var(--zig-orange);">🌐 Attack Surface AI Copilot</strong>
+          <div style="font-size: 10px; color: var(--muted);">Hindsight Vectorize • Zingela Stateless Scanner</div>
+        </div>
+        <button onclick="toggleChat()" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px;">✕</button>
+      </div>
+      <div class="cyber-chips">
+        <button class="cyber-chip" onclick="askAI('Analyze attack surface for open ports 22, 80, 443, 3306')">Analyze Open Ports</button>
+        <button class="cyber-chip" onclick="askAI('Explain SipHash SYN cookie validation in stateless scanning')">SipHash Cookies</button>
+        <button class="cyber-chip" onclick="askAI('Recommend targeted exploits for discovered web & DB ports')">Targeted Exploits</button>
+      </div>
+      <div class="cyber-messages" id="chatMsgs">
+        <div class="msg bot">👋 Greetings! I am your <strong>Attack Surface Intelligence Copilot</strong> powered by <strong>Hindsight AI</strong>. I can analyze port scan telemetry, identify exposed vulnerabilities, and evaluate network hygiene.</div>
+      </div>
+      <form class="cyber-input-form" onsubmit="handleSend(event)">
+        <input class="cyber-input" id="chatInput" placeholder="Ask about open ports, attack surfaces, or Zig raw sockets..." autocomplete="off"/>
+        <button type="submit" class="cyber-send">➤</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function log(text) {
+      const t = document.getElementById('term');
+      const div = document.createElement('div');
+      div.className = 'term-line';
+      div.innerHTML = text;
+      t.appendChild(div);
+      t.scrollTop = t.scrollHeight;
+    }
+
+    function runScan() {
+      const target = document.getElementById('target').value;
+      const ports = document.getElementById('ports').value.split(',');
+      log(`<span style="color: var(--zig-orange);">[INIT]</span> Generating SipHash seed and cyclic permutation for ${target}...`);
+      log(`<span style="color: var(--cyan);">[SCAN]</span> Dispatching stateless SYN packets across ${ports.length} target ports...`);
+
+      setTimeout(() => {
+        ports.forEach((p, idx) => {
+          setTimeout(() => {
+            log(`<span class="open-port">[OPEN]</span> 192.168.1.${10 + idx}:${p.trim()} (SYN-ACK received in 0.42ms)`);
+          }, (idx + 1) * 300);
+        });
+      }, 500);
+    }
+
+    function toggleChat() {
+      document.getElementById('chatModal').classList.toggle('active');
+    }
+    function askAI(p) {
+      document.getElementById('chatInput').value = p;
+      handleSend(new Event('submit'));
+    }
+    async function handleSend(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const msgs = document.getElementById('chatMsgs');
+      const userDiv = document.createElement('div');
+      userDiv.className = 'msg user';
+      userDiv.textContent = text;
+      msgs.appendChild(userDiv);
+      input.value = '';
+      msgs.scrollTop = msgs.scrollHeight;
+
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'msg bot';
+      loadingDiv.textContent = 'Analyzing with Hindsight AI...';
+      msgs.appendChild(loadingDiv);
+
+      try {
+        const res = await fetch('https://api.hindsight.vectorize.io/v1/default/banks/cybersecurity-copilot/reflect', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer hsk_50b425c99734390d6a9f74d59a7f5e78_021b3c05d1268660'
+          },
+          body: JSON.stringify({
+            query: `[Context: Zingela Stateless Line-Rate Port Scanner in Zig]\\n\\nUser Question: ${text}`
+          })
+        });
+        const data = await res.json();
+        loadingDiv.innerHTML = (data.text || 'No response').replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>').replace(/\\n/g, '<br/>');
+      } catch (err) {
+        loadingDiv.textContent = 'Error: ' + err.message;
+      }
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+  </script>
+</body>
+</html>
